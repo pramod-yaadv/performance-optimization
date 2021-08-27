@@ -1,0 +1,200 @@
+##### Allow Invalid Date ############
+SET SQL_MODE='ALLOW_INVALID_DATES';
+###################################
+UPDATE cmsmmt SET MENUCONFIGSET = REPLACE(MENUCONFIGSET, '/tow/', '/octa/');
+
+############### Evaluating Performance Metrics #####################
+# CPU 
+   CPU Utilization – Percentage of computer processing capacity used. 
+
+# Memory
+   - Freeable Memory – How much RAM is available on the DB instance, in megabytes. The red line in the Monitoring tab metrics is marked at 75% for CPU, Memory and Storage Metrics. If instance memory consumption frequently crosses that line, then this indicates that you should check your workload or upgrade your instance.
+
+   - Swap Usage – How much swap space is used by the DB instance, in megabytes.
+
+# Disk space
+     Free Storage Space – How much disk space is not currently being used by the DB instance, in megabytes.
+
+# Input/output operations
+    - Read IOPS, Write IOPS – The average number of disk read or write operations per second.
+    - Read Latency, Write Latency – The average time for a read or write operation in milliseconds.
+    - Read Throughput, Write Throughput – The average number of megabytes read from or written to disk per second.
+    - Queue Depth – The number of I/O operations that are waiting to be written to or read from disk.
+
+# Network traffic
+    - Network Receive Throughput, Network Transmit Throughput – The rate of network traffic to and from the DB instance in megabytes per second.
+
+# Database connections
+    - DB Connections – The number of client sessions that are connected to the DB instance.
+#######################################################################################
+
+# Copy the data and structure, but the indexes are not included
+   CREATE TABLE new_table SELECT * FROM old_table;
+
+# Copy the table structure and indexes, but not data:
+   CREATE TABLE new_table LIKE old_table;
+
+# To get all the Reference of Table 
+SELECT * FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_NAME = 'X' AND REFERENCED_COLUMN_NAME = 'X_id';
+
+# To copy everything, including database objects such as indexes, primary key constraint, foreign key constraints, triggers, etc., run these queries
+   CREATE TABLE TBLVPM_BKP LIKE tblvpm;
+   INSERT TBLVPM_BKP SELECT * FROM tblvpm_17_05_2019;
+
+# copy a table from one database to another database:
+   CREATE TABLE destination_db.new_table LIKE source_db.old_table;
+   INSERT destination_db.new_table
+   SELECT * FROM source_db.old_table;
+
+
+# Truncate Table Optimized Process
+  CREATE TABLE log_table_new LIKE log_table;
+  RENAME TABLE log_table TO log_table_old, log_table_new TO log_table;
+  DROP TABLE log_table_old;
+
+# Change Auto Increment Value
+  ALTER TABLE log_table_new AUTO_INCREMENT=some high enough value;
+	
+
+# To show each table status and its lock.
+  SHOW OPEN TABLES;
+  SHOW OPEN TABLES WHERE `Table` LIKE '%OCTAVPM%' AND In_use > 0;
+
+# Running or Locked Queries 
+ SHOW PROCESSLIST;
+ 
+# KILL the Query 
+ KILL <ID>
+
+# To Query Information 
+  EXPLAIN <QUERY>;
+
+# InnoDB Option and Variable Reference
+  https://dev.mysql.com/doc/refman/5.5/en/innodb-parameters.html
+  https://dev.mysql.com/doc/refman/5.7/en/innodb-best-practices.html
+
+# System variables that are true or false can be enabled at server startup by naming them, or disabled by using a --skip- prefix.
+# System variables that take a numeric value can be specified as --var_name=value on the command line or as var_name=value in option files.
+# Many system variables can be changed at runtime 
+# For information about GLOBAL and SESSION variable scope modifiers, refer to the SET statement documentation. 
+
+SELECT * from octa_retailer_item_price Where pilrfnum in(select pilrfnum from octapil where pilsku='');
+
+# To import large bulk of data into InnoDB:
+https://dba.stackexchange.com/questions/29913/innodb-insertion-faster
+https://aws.amazon.com/blogs/database/best-practices-for-configuring-parameters-for-amazon-rds-for-mysql-part-1-parameters-related-to-performance/
+https://www.saotn.org/mysql-innodb-performance-improvement/	
+https://dev.mysql.com/doc/refman/5.5/en/innodb-parameters.html
+
+  - Set in MySQL configuration
+        innodb_doublewrite = 0
+        innodb_buffer_pool_size = 50%+ system memory
+        innodb_log_file_size = 512M
+        log-bin = 0
+        innodb_support_xa = 0
+        innodb_flush_log_at_trx_commit = 0
+
+   SET autocommit=0;
+   SET FOREIGN_KEY_CHECKS = 0;
+   SET UNIQUE_CHECKS = 0;
+
+      ... SQL import statements ...
+	INSERT INTO yourtable VALUES (1,2), (5,5), ...;
+
+    COMMIT;
+
+   - Set right before transaction end:
+    SET UNIQUE_CHECKS = 1;
+    SET FOREIGN_KEY_CHECKS = 1;
+
+When doing bulk inserts into tables with auto-increment columns, set innodb_autoinc_lock_mode to 2 instead of the default value 1.
+ 
+SHOW PLUGINS;
+
+[mysqld]
+innodb_read_io_threads = 16
+innodb_write_io_threads = 4
+innodb_io_capacity = 5000
+thread_cache_size = 14
+
+1. tmp_table_size: from 32M to 128M (This might not work because of known bug)
+2. max_heap_table_size: 32M to 128M
+The manual state MySQL takes the lower value assigned to the two variables and uses that as the good value for tmp_table_size. Thus, we recommend that tmp_table_size and max_heap_table_size should be the same value.
+tmp_table_size      = 32 MB
+max_heap_table_size = 32 MB
+
+show global status like 'threads%';
+
+SET @@SQL_MODE = '';
+################################ Optimizing INSERT Statements ########################################
+ To optimize insert speed, combine many small operations into a single large operation. Ideally, you make a single connection, send the data for many new rows at once, and delay all index updates and consistency checking until the very end.
+
+The time required for inserting a row is determined by the following factors, where the numbers indicate approximate proportions:
+    Connecting: (3)
+    Sending query to server: (2)
+    Parsing query: (2)
+    Inserting row: (1 × size of row)
+    Inserting indexes: (1 × number of indexes)
+    Closing: (1)
+
+# bulk_insert_buffer_size  - This variable to make data insertion even faster
+
+ Take advantage of the fact that columns have default values. Insert values explicitly only when the value to be inserted differs from the default. This reduces the parsing that MySQL must do and improves the insert speed. 
+
+# Approach 
+1. Load the Data with disabling/Dropping Primary Key Unique Index.
+2. Load the Data into Table
+3. Create the FULLTEXT index after the data is loaded. 
+   - CREATE UNIQUE INDEX PK_COLUMN_INDEX on t1(PK_COLUMN);
+4. Don't send data for Column where value matching to Default Value.
+5. Customize Various Parameters Value
+   a. bulk_insert_buffer_size
+   b. innodb_doublewrite (can be disable in extreme performance cases)
+   c. tmp_table_size      = 32 MB
+   d. max_heap_table_size = 32 MB
+   e. innodb_read_io_threads = 16
+   f. innodb_write_io_threads = 4
+   g. innodb_io_capacity = 5000
+   h. thread_cache_size = 14
+   i. innodb_autoinc_lock_mode 
+   k. innodb_buffer_pool_size = 50%+ system memory
+   l. innodb_log_file_size = 512M
+   m. log-bin = 0
+   n. innodb_support_xa = 0
+   o. innodb_flush_log_at_trx_commit = 0
+
+6. SET autocommit=0;
+      ... SQL import statements ...
+	INSERT INTO yourtable VALUES (1,2), (5,5), ...;
+   COMMIT;	
+   - Add right after transaction start:
+    SET FOREIGN_KEY_CHECKS = 0;
+    SET UNIQUE_CHECKS = 0;
+    SET AUTOCOMMIT = 0;
+
+   - Set right before transaction end:
+    SET UNIQUE_CHECKS = 1;
+    SET FOREIGN_KEY_CHECKS = 1;
+
+7. Avoid BLOB or Text Column in Table 
+9. String Column used in Group By or Distinct clause should not be more than 512 Bytes
+#######################################################################################################
+
+# Some conditions prevent the use of an in-memory temporary table, in which case the server uses an on-disk table instead, which increases write I/O. These conditions are the following:
+  - Presence of a BLOB or TEXT column in the table.
+  - Presence of any string column in a GROUP BY or DISTINCT clause larger than 512 bytes for binary strings or 512 characters for nonbinary strings. (Before MySQL 5.6.15, the limit is 512 bytes regardless of string type.)
+  - Presence of any string column with a maximum length larger than 512 (bytes for binary strings, characters for nonbinary strings) in the SELECT list, if UNION or UNION ALL is used.
+  - The SHOW COLUMNS and the DESCRIBE statements use BLOB as the type for some columns, thus the temporary table used for the results is an on-disk table.
+
+
+# innodb_doublewrite 
+ When enabled (the default), InnoDB stores all data twice, first to the doublewrite buffer, and then to the actual data files. This variable can be turned off with --skip-innodb-doublewrite for benchmarks or cases when top performance is needed rather than concern for data integrity or possible failures. 
+
+# Export Mysql Query result into CSV File. 
+SELECT id, name, email INTO OUTFILE '/tmp/result.csv' FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY ‘\\’ LINES TERMINATED BY '\n' FROM table; 
+
+
+# Compare Two Database and find the changes 
+mysqldump --skip-comments --skip-extended-insert -u root -p dbName1>file1.sql
+mysqldump --skip-comments --skip-extended-insert -u root -p dbName2>file2.sql
+diff file1.sql file2.sql

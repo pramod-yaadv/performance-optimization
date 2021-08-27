@@ -1,0 +1,70 @@
+
+# Avoiding Fetching TEXT columns that you don't need to fetch. (This can force an in-memory temp table to turn into on-disk.)
+# Avoiding using TEXT data type columns that could be a smaller VARCHAR (Same reason.)
+# INDEX(a,b) may be better than INDEX(a), INDEX(b) ("composite" index)
+# The buffer_pool is very important for performance. Did the value of innodb_buffer_pool_size change? How much data do/did you have? How much RAM do/did you have.
+    InnoDB on a 12GB machine, key_buffer_size should be about 20M and innodb_buffer_pool_size should be 8G
+
+#Parameters
+innodb_buffer_pool_size = 8G # (adjust value here, 50%-70% of total RAM)
+innodb_log_file_size = 512M (128M – 2G : does not need to be larger than buffer pool)
+innodb_flush_log_at_trx_commit = 1 # may change to 2 or 0
+innodb_flush_method = O_DIRECT (avoid double buffering with buffer pool and filesystem cache.)
+innodb_thread_concurrency= 4 (A recommendedvalue is 2 times the number of CPUs plus the number of disks.)
+innodb_buffer_pool_instances= 1 - 64
+# No of I/O threads for read and write operations
+innodb_read_io_threads = 16
+innodb_write_io_threads = 4
+wait_timeout=
+max_connections=
+query_cache_size=0
+
+#Bulk Operation
+
+SET FOREIGN_KEY_CHECKS = 0;
+SET UNIQUE_CHECKS = 0;
+SET AUTOCOMMIT = 0;
+
+   --- Large Queries
+
+SET UNIQUE_CHECKS = 1;
+SET FOREIGN_KEY_CHECKS = 1;
+COMMIT;
+
+
+SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_%';
+
+
+https://aws.amazon.com/blogs/database/best-practices-for-configuring-parameters-for-amazon-rds-for-mysql-part-1-parameters-related-to-performance/
+https://aws.amazon.com/blogs/database/best-practices-for-amazon-aurora-mysql-database-configuration/
+
+#Best practices for configuring parameters for Amazon RDS for MySQL, part 3: Parameters related to security, operational manageability, and connectivity timeout
+https://aws.amazon.com/blogs/database/best-practices-for-configuring-parameters-for-amazon-rds-for-mysql-part-3-parameters-related-to-security-operational-manageability-and-connectivity-timeout/
+
+#Performance Tuning
+https://www.percona.com/blog/2016/10/12/mysql-5-7-performance-tuning-immediately-after-installation/
+
+innodb_io_capacity and innodb_io_capacity_max  [These Parameter's to set when performing a lot of writes all the time ]
+innodb_io_capacity_max=6000   [If SSD Available]
+innodb_io_capacity=3000  (50% of the max)
+
+
+#InnoDB Memcached Plugin as a caching layer
+
+#No of CPU Core & Thread in each core
+
+# Enabling Performance Insights
+
+https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PerfInsights.Enabling.html#USER_PerfInsights.Enabling.Console.Modifying
+slow_query_log
+
+This parameter is very helpful in identifying slow queries. The value can be 0 (or OFF) to disable the slow query log or 1 (or ON) to enable the log. The default value is 0, which disables this feature.
+
+The threshold to determine if a query is slow is defined by another parameter, long_query_time. The long_query_time parameter defines the query execution time in seconds. You can capture slow queries in either a table or a file. Which you do depends on the value of another parameter, log_output, which can equal TABLE or FILE. The default is table. For more details, see this YouTube video.
+log_queries_not_using_indexes
+
+This is another parameter frequently used to identify problematic queries. When this parameter is set to 1 (enabled), it logs all the queries not using the index to the slow query log. By default, this parameter is not enabled and the value is 0.
+
+#General Purpose & Provisioned IOPS SSD
+
+
