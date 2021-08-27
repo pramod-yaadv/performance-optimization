@@ -1,0 +1,94 @@
+Ref . https://github.com/stcarrez/sql-benchmark
+
+### MySQL/MariaDB setup
+
+    Create the 'sqlbench' database in MySQL/MariaDB
+
+	mysql -u root
+	mysql> create database sqlbench;
+
+### Create the 'sqlbench' user and give the access rights:
+
+	mysql> grant select, insert, update, delete,
+       		create, drop, create temporary tables, execute,
+	       show view on sqlbench.* to sqlbench@'localhost';
+
+	mysql> flush privileges;
+
+
+
+### SysBench Benchmarking ########
+https://www.howtoforge.com/how-to-benchmark-your-system-cpu-file-io-mysql-with-sysbench
+
+To measure MySQL performance, we first create a test table in the database test with 1,000,000 rows of data:
+
+sysbench --test=oltp --oltp-table-size=1000000 --db-driver=mysql --mysql-db=test --mysql-user=root --mysql-password=yourrootsqlpassword prepare
+
+root@server1:~# sysbench --test=oltp --oltp-table-size=1000000 --db-driver=mysql --mysql-db=test --mysql-user=root --mysql-password=yourrootsqlpassword prepare
+sysbench 0.4.12: multi-threaded system evaluation benchmark
+
+No DB drivers specified, using mysql
+Creating table 'sbtest'...
+Creating 1000000 records in table 'sbtest'...
+root@server1:~#
+
+Replace the word yourrootsqlpassword with your MySQL root password in the above command. Do the same in the next commands.
+
+Afterwards, you can run the MySQL benchmark as follows:
+
+sysbench --test=oltp --oltp-table-size=1000000 --db-driver=mysql --mysql-db=test --mysql-user=root --mysql-password=yourrootsqlpassword --max-time=60 --oltp-read-only=on --max-requests=0 --num-threads=8 run
+
+root@server1:~# sysbench --test=oltp --oltp-table-size=1000000 --db-driver=mysql --mysql-db=test --mysql-user=root --mysql-password=yourrootsqlpassword --max-time=60 --oltp-read-only=on --max-requests=0 --num-threads=8 run
+sysbench 0.4.12:  multi-threaded system evaluation benchmark
+ 
+No DB drivers specified, using mysql
+Running the test with following options:
+Number of threads: 8
+ 
+Doing OLTP test.
+Running mixed OLTP test
+Doing read-only test
+Using Special distribution (12 iterations,  1 pct of values are returned in 75 pct cases)
+Using "BEGIN" for starting transactions
+Using auto_inc on the id column
+Threads started!
+Time limit exceeded, exiting...
+(last message repeated 7 times)
+Done.
+ 
+OLTP test statistics:
+    queries performed:
+        read:                            2253860
+        write:                           0
+        other:                           321980
+        total:                           2575840
+    transactions:                        160990 (2683.06 per sec.)
+    deadlocks:                           0      (0.00 per sec.)
+    read/write requests:                 2253860 (37562.81 per sec.)
+    other operations:                    321980 (5366.12 per sec.)
+ 
+Test execution summary:
+    total time:                          60.0024s
+    total number of events:              160990
+    total time taken by event execution: 479.3419
+    per-request statistics:
+         min:                                  0.81ms
+         avg:                                  2.98ms
+         max:                               3283.40ms
+         approx.  95 percentile:               4.62ms
+ 
+Threads fairness:
+    events (avg/stddev):           20123.7500/63.52
+    execution time (avg/stddev):   59.9177/0.00
+ 
+root@server1:~#
+
+The important number is the transactions per second value:
+
+    transactions:                        160990 (2683.06 per sec.)
+
+To clean up the system afterwards (i.e., remove the test table), run:
+
+sysbench --test=oltp --db-driver=mysql --mysql-db=test --mysql-user=root --mysql-password=yourrootsqlpassword cleanup
+
+
